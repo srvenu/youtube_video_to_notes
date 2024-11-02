@@ -23,3 +23,33 @@ spacy==3.4.0
 fpdf==1.7.2
 requests==2.28.1
 pytube==11.0.0
+
+```
+```bash
+pip install -r requirements.txt
+```
+```bash
+python -m spacy download en_core_web_sm
+```
+
+How to Run the Application
+
+Clone this repository to your local machine:
+
+```bash
+git clone https://github.com/yourusername/enhanced-youtube-summarizer.git
+cd enhanced-youtube-summarizer
+```
+Install the required packages (as mentioned above).
+Run the Streamlit application:
+
+```bash
+streamlit run app.py
+```
+Open your web browser and go to the URL displayed in the terminal (usually http://localhost:8501).
+Usage Instructions
+
+Enter the YouTube video URL in the provided input field.
+Click the "Summarize and Generate Notes" button.
+View the fetched transcript, summary, and important topics.
+Download the generated PDF for offline access.
