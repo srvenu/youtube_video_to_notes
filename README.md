@@ -1,5 +1,13 @@
 # Enhanced YouTube Video Summarizer with Notes
 
+##Demo Video
+
+You can watch the demo video of the application in action:
+
+[![Watch the Demo Video](demo-thumbnail.jpg)](video.mp4)
+
+**[Watch the Demo Video (MP4)](video.mp4)**
+
 This project provides a Streamlit application that allows users to summarize YouTube videos and extract important topics from their transcripts. It is designed to help users quickly understand the main points of video content and create notes for easier reference.
 
 ## Features
