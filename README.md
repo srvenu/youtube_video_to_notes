@@ -3,8 +3,7 @@
 ##Demo Video
 
 You can watch the demo video of the application in action:
-
-[![Watch the Demo Video](demo-thumbnail.jpg)](demo.gif)
+![Demo of the Video](demo.gif)
 
 **[Watch the Demo Video (MP4)](video.mp4)**
 
