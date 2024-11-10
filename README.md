@@ -1,6 +1,6 @@
 # Enhanced YouTube Video Summarizer with Notes
 
-##Demo Video
+## Demo Video
 
 You can watch the demo video of the application in action:
 ![Demo of the Video](demo.gif)
