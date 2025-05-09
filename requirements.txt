@@ -5,4 +5,4 @@ transformers
 spacy
 torch
 Pillow
-protobuf<4.0.0  # To avoid compatibility issues with some versions of spaCy and transformers
+protobuf<4.0.0
