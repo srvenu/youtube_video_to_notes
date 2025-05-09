@@ -16,7 +16,7 @@ except:
     nlp = spacy.load("en_core_web_sm")
 
 # Initialize models
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 nlp = spacy.load("en_core_web_sm")
 
 def extract_video_id(url):
