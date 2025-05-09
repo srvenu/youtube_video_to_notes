@@ -1,7 +1,8 @@
-streamlit==1.20.0
-youtube-transcript-api==0.6.0
-transformers==4.30.0
-spacy==3.4.0
-fpdf==1.7.2
-requests==2.28.1
-pytube==11.0.0
+streamlit
+fpdf
+youtube-transcript-api
+transformers
+spacy
+torch
+Pillow
+protobuf<4.0.0  # To avoid compatibility issues with some versions of spaCy and transformers
