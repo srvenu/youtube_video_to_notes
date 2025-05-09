@@ -7,17 +7,19 @@ from fpdf import FPDF
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound
 from transformers import pipeline
 import spacy
+from transformers import pipeline
 
+# Load spaCy model safely
 try:
     nlp = spacy.load("en_core_web_sm")
-except:
+except OSError:
     import os
     os.system("python -m spacy download en_core_web_sm")
     nlp = spacy.load("en_core_web_sm")
 
-# Initialize models
+# Initialize summarizer model
 summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
-nlp = spacy.load("en_core_web_sm")
+
 
 def extract_video_id(url):
     """Extract the video ID from a YouTube URL."""
