@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YouTube → Structured Notes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5',700:'#4338ca' } }
+        }
+      }
+    }
+  </script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .card { @apply bg-white rounded-2xl border border-gray-100 shadow-sm; }
+    .label { @apply text-[10px] font-bold uppercase tracking-widest text-gray-400; }
+    .prose-note p { margin: 0; }
+    @keyframes fade-up {
+      from { opacity:0; transform:translateY(12px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .fade-up { animation: fade-up .35s ease both; }
+    .topic-bar-0 { background:#6366f1; }
+    .topic-bar-1 { background:#8b5cf6; }
+    .topic-bar-2 { background:#ec4899; }
+    .topic-bar-3 { background:#3b82f6; }
+    .topic-bar-4 { background:#10b981; }
+    .topic-bar-5 { background:#f59e0b; }
+  </style>
+</head>
+
+<body class="min-h-full bg-gray-50 text-gray-800 antialiased"
+      x-data="app()" x-cloak>
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
+  <header class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
+    <div class="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
+      <div>
+        <h1 class="text-xl font-bold tracking-tight flex items-center gap-2">
+          <svg class="w-6 h-6 opacity-90" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088C19.37 3.6 12 3.6 12 3.6s-7.37 0-9.407.517A3.007 3.007 0 00.505 6.205 31.247 31.247 0 000 12a31.247 31.247 0 00.505 5.795 3.007 3.007 0 002.088 2.088C4.63 20.4 12 20.4 12 20.4s7.37 0 9.407-.517a3.007 3.007 0 002.088-2.088A31.247 31.247 0 0024 12a31.247 31.247 0 00-.505-5.795zM9.6 15.6V8.4l6.4 3.6-6.4 3.6z"/>
+          </svg>
+          YouTube → Structured Notes
+        </h1>
+        <p class="text-indigo-200 text-xs mt-0.5">LangChain · Ollama · Pydantic</p>
+      </div>
+
+      <!-- Model picker -->
+      <div class="flex items-center gap-2">
+        <span class="text-indigo-200 text-xs hidden sm:block">Model</span>
+        <select x-model="model"
+                class="bg-indigo-700/60 border border-indigo-400/40 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-white/30">
+          {% for m in models %}
+          <option value="{{ m }}">{{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Main ───────────────────────────────────────────────────────────── -->
+  <main class="max-w-5xl mx-auto px-6 py-8 space-y-5">
+
+    <!-- URL input card -->
+    <div class="card p-5">
+      <form @submit.prevent="generate" class="space-y-4">
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+            </svg>
+            <input x-model="url" type="text"
+                   placeholder="https://www.youtube.com/watch?v=..."
+                   class="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition"/>
+          </div>
+          <button type="submit"
+                  :disabled="loading || !url.trim()"
+                  class="flex items-center gap-2 bg-brand-600 hover:bg-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
+            <template x-if="!loading">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+              </svg>
+            </template>
+            <template x-if="loading">
+              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            </template>
+            <span x-text="loading ? 'Processing…' : 'Generate Notes'"></span>
+          </button>
+        </div>
+
+        <!-- Chunk size slider -->
+        <div class="flex items-center gap-3 pt-1">
+          <span class="label">Chunk size</span>
+          <input type="range" x-model="chunkSize" min="1000" max="6000" step="500"
+                 class="w-36 accent-brand-600"/>
+          <span class="text-xs text-gray-500 w-16" x-text="Number(chunkSize).toLocaleString() + ' ch'"></span>
+        </div>
+      </form>
+    </div>
+
+    <!-- Video + Image upload (shown once a valid URL is typed) -->
+    <template x-if="videoId">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 fade-up">
+
+        <!-- Embedded video -->
+        <div class="card overflow-hidden">
+          <iframe :src="'https://www.youtube.com/embed/' + videoId"
+                  class="w-full aspect-video" frameborder="0" allowfullscreen></iframe>
+        </div>
+
+        <!-- Image uploader -->
+        <div class="card p-5 flex flex-col">
+          <p class="label mb-3">Attach images (optional)</p>
+          <div @dragover.prevent @drop.prevent="handleDrop($event)"
+               @click="$refs.imgInput.click()"
+               class="flex-1 border-2 border-dashed border-gray-200 hover:border-brand-400 rounded-xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors py-6">
+            <svg class="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+            <p class="text-xs text-gray-400">Drag & drop or click to upload</p>
+            <input type="file" x-ref="imgInput" class="hidden" accept="image/*" multiple
+                   @change="handleImageSelect($event)"/>
+          </div>
+
+          <!-- Previews -->
+          <div class="mt-3 space-y-2">
+            <template x-for="(img, i) in images" :key="i">
+              <div class="flex items-center gap-2">
+                <img :src="img.preview" class="w-9 h-9 rounded-lg object-cover border border-gray-100"/>
+                <input x-model="img.caption" type="text"
+                       :placeholder="'Tag as topic (e.g. ' + img.name.split('.')[0] + ')'"
+                       class="flex-1 text-xs border border-gray-200 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-400"/>
+                <button @click="images.splice(i,1)"
+                        class="text-gray-300 hover:text-red-400 transition-colors flex-shrink-0">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Progress card -->
+    <template x-if="loading || progressMsg">
+      <div class="card p-6 fade-up">
+
+        <!-- 4-step stepper -->
+        <div class="flex items-center mb-5">
+          <template x-for="(s, i) in steps" :key="i">
+            <div class="flex items-center" :class="i < steps.length-1 ? 'flex-1' : ''">
+              <div class="flex flex-col items-center">
+                <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300"
+                     :class="s.done
+                       ? 'bg-green-500 text-white shadow-sm shadow-green-200'
+                       : s.active
+                         ? 'bg-brand-600 text-white shadow-sm shadow-indigo-200'
+                         : 'bg-gray-100 text-gray-400'">
+                  <template x-if="s.done">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                    </svg>
+                  </template>
+                  <template x-if="!s.done">
+                    <span x-text="i+1"></span>
+                  </template>
+                </div>
+                <span class="text-[10px] mt-1 font-medium transition-colors"
+                      :class="s.active ? 'text-brand-600' : s.done ? 'text-green-500' : 'text-gray-400'"
+                      x-text="s.label"></span>
+              </div>
+              <div x-show="i < steps.length-1"
+                   class="flex-1 h-0.5 mx-2 mb-4 rounded transition-all duration-500"
+                   :class="s.done ? 'bg-green-400' : 'bg-gray-200'"></div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Bar -->
+        <div class="bg-gray-100 rounded-full h-1.5 overflow-hidden">
+          <div class="bg-gradient-to-r from-brand-500 to-purple-500 h-full rounded-full transition-all duration-500"
+               :style="'width:' + progress + '%'"></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2" x-text="progressMsg"></p>
+      </div>
+    </template>
+
+    <!-- Error -->
+    <template x-if="error">
+      <div class="card p-4 border-red-200 bg-red-50 flex items-start gap-3 fade-up">
+        <svg class="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <p class="text-sm text-red-600" x-text="error"></p>
+      </div>
+    </template>
+
+    <!-- ── Results ─────────────────────────────────────────────────────── -->
+    <template x-if="notes">
+      <div class="space-y-5 fade-up">
+
+        <!-- Title + Overview -->
+        <div class="card p-6">
+          <h2 class="text-2xl font-bold text-gray-900 leading-snug" x-text="notes.title_guess"></h2>
+          <div class="mt-4">
+            <p class="label mb-2">Overview</p>
+            <p class="text-sm text-gray-600 leading-relaxed" x-text="notes.overall_summary"></p>
+          </div>
+        </div>
+
+        <!-- Key Takeaways -->
+        <div class="card p-6">
+          <p class="label mb-4">Key Takeaways</p>
+          <ol class="space-y-3">
+            <template x-for="(t, i) in notes.key_takeaways" :key="i">
+              <li class="flex gap-3 items-start">
+                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 text-xs font-bold flex items-center justify-center"
+                      x-text="i+1"></span>
+                <span class="text-sm text-gray-700 leading-relaxed" x-text="t"></span>
+              </li>
+            </template>
+          </ol>
+        </div>
+
+        <!-- Topic cards -->
+        <div>
+          <p class="label mb-3 px-1">Topic Notes</p>
+          <div class="space-y-3">
+            <template x-for="(tn, i) in notes.topics" :key="i">
+              <div class="card overflow-hidden fade-up"
+                   :style="'animation-delay:' + (i * 60) + 'ms'">
+                <div class="flex">
+                  <!-- Color accent bar -->
+                  <div class="w-1 flex-shrink-0" :class="'topic-bar-' + (i % 6)"></div>
+
+                  <div class="flex-1 p-5">
+                    <!-- Collapsible header -->
+                    <button class="w-full flex items-center justify-between text-left"
+                            @click="tn._open = tn._open === false ? true : false">
+                      <h3 class="font-semibold text-gray-800 text-sm" x-text="tn.topic"></h3>
+                      <svg class="w-4 h-4 text-gray-400 transition-transform flex-shrink-0"
+                           :class="tn._open === false ? '' : 'rotate-180'"
+                           fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                      </svg>
+                    </button>
+
+                    <div x-show="tn._open !== false" x-transition>
+                      <p class="text-sm text-gray-500 mt-2 mb-4 leading-relaxed" x-text="tn.summary"></p>
+
+                      <!-- Key points -->
+                      <div class="mb-3">
+                        <p class="label mb-2">Key Points</p>
+                        <ul class="space-y-1.5">
+                          <template x-for="(p, j) in tn.key_points" :key="j">
+                            <li class="flex gap-2 items-start text-sm text-gray-600">
+                              <span class="mt-2 w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0"></span>
+                              <span x-text="p"></span>
+                            </li>
+                          </template>
+                        </ul>
+                      </div>
+
+                      <!-- Quotes -->
+                      <template x-if="tn.quotes && tn.quotes.length">
+                        <div>
+                          <p class="label mb-2">Quotes</p>
+                          <div class="space-y-2">
+                            <template x-for="(q, j) in tn.quotes" :key="j">
+                              <blockquote class="border-l-2 border-indigo-200 pl-3 text-sm text-gray-500 italic leading-relaxed"
+                                          x-text="q"></blockquote>
+                            </template>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Conclusion -->
+        <div class="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
+          <p class="label text-indigo-400 mb-2">Conclusion</p>
+          <p class="text-sm text-gray-700 leading-relaxed" x-text="notes.conclusion"></p>
+        </div>
+
+        <!-- Download -->
+        <div class="flex justify-end pb-6">
+          <a href="/download" download="structured_notes.pdf"
+             class="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl text-sm font-medium shadow-sm transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a1 1 0 001 1h16a1 1 0 001-1v-3"/>
+            </svg>
+            Download PDF
+          </a>
+        </div>
+      </div>
+    </template>
+  </main>
+
+  <!-- ── Alpine app ───────────────────────────────────────────────────── -->
+  <script src="https://unpkg.com/alpinejs@3.14.1/dist/cdn.min.js" defer></script>
+  <script>
+  function app() {
+    return {
+      url: '',
+      model: '{{ models[0] }}',
+      chunkSize: 3000,
+      loading: false,
+      images: [],
+      notes: null,
+      error: null,
+      progress: 0,
+      progressMsg: '',
+      steps: [
+        { label: 'Transcript', done: false, active: false },
+        { label: 'Summarise',  done: false, active: false },
+        { label: 'Notes',      done: false, active: false },
+        { label: 'PDF',        done: false, active: false },
+      ],
+
+      get videoId() {
+        const m = this.url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        return m ? m[1] : null;
+      },
+
+      handleImageSelect(e) {
+        for (const f of e.target.files) this._addImage(f);
+      },
+      handleDrop(e) {
+        for (const f of e.dataTransfer.files)
+          if (f.type.startsWith('image/')) this._addImage(f);
+      },
+      _addImage(file) {
+        this.images.push({ file, name: file.name, caption: '', preview: URL.createObjectURL(file) });
+      },
+
+      resetState() {
+        this.steps.forEach(s => { s.done = false; s.active = false; });
+        this.progress = 0;
+        this.progressMsg = '';
+        this.notes = null;
+        this.error = null;
+      },
+
+      _setStep(name) {
+        const map = { transcript: 0, summarize: 1, notes: 2, pdf: 3 };
+        const idx = map[name];
+        if (idx == null) return;
+        this.steps.forEach((s, i) => { s.done = i < idx; s.active = i === idx; });
+      },
+
+      async generate() {
+        if (!this.videoId) { this.error = 'Please enter a valid YouTube URL.'; return; }
+        this.loading = true;
+        this.resetState();
+
+        const fd = new FormData();
+        fd.append('url', this.url);
+        fd.append('model', this.model);
+        fd.append('chunk_size', this.chunkSize);
+        this.images.forEach(img => {
+          fd.append('images', img.file);
+          fd.append('captions', img.caption);
+        });
+
+        try {
+          const resp = await fetch('/generate', { method: 'POST', body: fd });
+          const reader = resp.body.getReader();
+          const dec = new TextDecoder();
+          let buf = '';
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += dec.decode(value, { stream: true });
+            const lines = buf.split('\n');
+            buf = lines.pop();
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              let ev;
+              try { ev = JSON.parse(line.slice(6)); } catch { continue; }
+
+              if (ev.type === 'progress') {
+                this._setStep(ev.step);
+                this.progressMsg = ev.message;
+                const baseMap = { transcript: 5, summarize: 15, notes: 65, pdf: 90 };
+                if (ev.current && ev.total) {
+                  this.progress = Math.round(15 + (ev.current / ev.total) * 50);
+                } else {
+                  this.progress = baseMap[ev.step] ?? this.progress;
+                }
+              } else if (ev.type === 'result') {
+                this.notes = ev.notes;
+                this.steps.forEach(s => { s.done = true; s.active = false; });
+                this.progress = 100;
+                this.progressMsg = 'Done!';
+              } else if (ev.type === 'error') {
+                this.error = ev.message;
+              }
+            }
+          }
+        } catch (e) {
+          this.error = e.message;
+        } finally {
+          this.loading = false;
+        }
+      }
+    }
+  }
+  </script>
+</body>
+</html>
